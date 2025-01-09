@@ -14,9 +14,58 @@
         <button class="btn btn-success" id="startRecording">Start Recording</button>
         <button class="btn btn-danger" id="stopRecording" disabled>Stop Recording</button>
         <div id="status"></div>
+
+
+        <button id="enterFullscreenBtn">Enter Fullscreen</button>
     </div>
 
 <script>
+
+
+
+
+    // Function to check if the browser is in fullscreen mode
+    function isFullscreen() {
+            return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        }
+
+    // Function to enter fullscreen
+    function enterFullscreen() {
+            const body = document.documentElement;
+            if (body.requestFullscreen) {
+                body.requestFullscreen();
+            } else if (body.webkitRequestFullscreen) {
+                body.webkitRequestFullscreen();
+            } else if (body.mozRequestFullScreen) {
+                body.mozRequestFullScreen();
+            } else if (body.msRequestFullscreen) {
+                body.msRequestFullscreen();
+            }
+    }
+
+    // Function to handle fullscreen change events
+    function onFullscreenChange() {
+            if (!isFullscreen()) {
+                alert("You have exited fullscreen mode!");
+            }
+    }
+
+    // Event listener to handle fullscreen change
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    document.addEventListener('mozfullscreenchange', onFullscreenChange);
+    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+
+    // Automatically trigger fullscreen when the page is loaded
+    window.onload = () => {
+        enterFullscreen();
+    }
+
+    // Button click to enter fullscreen
+    document.getElementById('enterFullscreenBtn').addEventListener('click', () => {
+        enterFullscreen();
+    });
+
 // AWS Configuration
 AWS.config.update({
     accessKeyId: 'YOUR_ACCESS_KEY_ID',
