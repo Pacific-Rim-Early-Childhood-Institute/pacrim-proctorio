@@ -15,56 +15,51 @@
         <button class="btn btn-danger" id="stopRecording" disabled>Stop Recording</button>
         <div id="status"></div>
 
-
         <button class="btn btn-success" id="enterFullscreenBtn">Enter Fullscreen</button>
     </div>
 
 <script>
+// Function to check if the browser is in fullscreen mode
+function isFullscreen() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+}
 
-
-
-
-    // Function to check if the browser is in fullscreen mode
-    function isFullscreen() {
-            return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
-        }
-
-    // Function to enter fullscreen
-    function enterFullscreen() {
-            const body = document.documentElement;
-            if (body.requestFullscreen) {
-                body.requestFullscreen();
-            } else if (body.webkitRequestFullscreen) {
-                body.webkitRequestFullscreen();
-            } else if (body.mozRequestFullScreen) {
-                body.mozRequestFullScreen();
-            } else if (body.msRequestFullscreen) {
-                body.msRequestFullscreen();
-            }
+// Function to enter fullscreen
+function enterFullscreen() {
+    const body = document.documentElement;
+    if (body.requestFullscreen) {
+        body.requestFullscreen();
+    } else if (body.webkitRequestFullscreen) {
+        body.webkitRequestFullscreen();
+    } else if (body.mozRequestFullScreen) {
+        body.mozRequestFullScreen();
+    } else if (body.msRequestFullscreen) {
+        body.msRequestFullscreen();
     }
+}
 
-    // Function to handle fullscreen change events
-    function onFullscreenChange() {
-            if (!isFullscreen()) {
-                alert("You have exited fullscreen mode!");
-            }
+// Function to handle fullscreen change events
+function onFullscreenChange() {
+    if (!isFullscreen()) {
+        alert("You have exited fullscreen mode!");
     }
+}
 
-    // Event listener to handle fullscreen change
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-    document.addEventListener('mozfullscreenchange', onFullscreenChange);
-    document.addEventListener('MSFullscreenChange', onFullscreenChange);
+// Event listener to handle fullscreen change
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+document.addEventListener('mozfullscreenchange', onFullscreenChange);
+document.addEventListener('MSFullscreenChange', onFullscreenChange);
 
-    // Automatically trigger fullscreen when the page is loaded
-    window.onload = () => {
-        enterFullscreen();
-    }
+// Automatically trigger fullscreen when the page is loaded
+window.onload = () => {
+    enterFullscreen();
+}
 
-    // Button click to enter fullscreen
-    document.getElementById('enterFullscreenBtn').addEventListener('click', () => {
-        enterFullscreen();
-    });
+// Button click to enter fullscreen
+document.getElementById('enterFullscreenBtn').addEventListener('click', () => {
+    enterFullscreen();
+});
 
 // AWS Configuration
 AWS.config.update({
@@ -83,28 +78,35 @@ let cameraStream;
 // Start recording function
 async function startRecording() {
     try {
-        // Get screen stream
+        // Get screen stream with audio
         screenStream = await navigator.mediaDevices.getDisplayMedia({
             video: { width: 1280, height: 720 },
             audio: true
         });
         $('#screenVideo')[0].srcObject = screenStream;
 
-        // Get camera stream
+        // Get camera stream with audio
         cameraStream = await navigator.mediaDevices.getUserMedia({
             video: true,
-            audio: false
+            audio: true
         });
         $('#cameraVideo')[0].srcObject = cameraStream;
 
+        // Merge screen and camera streams
+        const tracks = [
+            ...screenStream.getTracks(),
+            ...cameraStream.getTracks()
+        ];
+        const mixedStream = new MediaStream(tracks);
+
         // Create MediaRecorder
-        mediaRecorder = new MediaRecorder(screenStream, {
+        mediaRecorder = new MediaRecorder(mixedStream, {
             mimeType: 'video/webm;codecs=vp8,opus'
         });
 
         // Handle data available event
         mediaRecorder.ondataavailable = handleDataAvailable;
-        
+
         // Start recording in chunks
         mediaRecorder.start(10000); // 10 second chunks
 
@@ -129,7 +131,7 @@ function handleDataAvailable(event) {
 // Upload chunk to S3
 function uploadChunk(blob) {
     const fileName = `recording-${Date.now()}.webm`;
-    
+
     // Create pre-signed URL
     const params = {
         Bucket: bucketName,
@@ -199,7 +201,7 @@ function stopRecording() {
     mediaRecorder.stop();
     screenStream.getTracks().forEach(track => track.stop());
     cameraStream.getTracks().forEach(track => track.stop());
-    
+
     $('#startRecording').prop('disabled', false);
     $('#stopRecording').prop('disabled', true);
     $('#status').text('Recording stopped');
